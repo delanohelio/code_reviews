@@ -1,0 +1,79 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/styles/github.min.css" />
+  <!--diff2html-css-->
+  <!--diff2html-js-ui-->
+  <link rel="stylesheet" href="https://rawcdn.githack.com/jasonm23/markdown-css-themes/a2b4fd6d5627e4536a789b1feb46d94cd841f164/markdown.css" />
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const targetElement = document.getElementById('diff');
+      const diff2htmlUi = new Diff2HtmlUI(targetElement);
+      diff2html-fileListToggle
+      //diff2html-synchronisedScroll
+      //diff2html-highlightCode
+    });
+  </script>
+  <style>
+    body {
+      width: 90%;
+      max-width: unset;
+    }
+    pre code {
+      display: block;
+      background: #E8E8E8;
+      font-size: small;
+      white-space: pre;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      min-width: 100px;
+      max-height: 250px;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+<h2>dotcms/core - PR 18281</h2>
+<p><strong>Title</strong>: Issue 18268 when es is down the form are not getting render</p>
+<h3>Code Review</h3>
+<p>Inline Review ID - <a href="https://github.com/dotCMS/core/pull/18281#discussion_r407776444">MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwNzc3NjQ0NA==</a></p>
+<p>Original Commit - <a href="https://github.com/dotcms/core/commit/66ef18c78cb62d766e29256273e926614f6bf390">66ef18c78cb62d766e29256273e926614f6bf390</a></p>
+<pre><code>dotCMS/src/test/java/com/dotcms/contenttype/business/FieldAPIImplTest.java
+
+@@ -0,0 +1,160 @@
++package com.dotcms.contenttype.business;
++
++import com.dotcms.contenttype.business.FieldAPIImpl;
++import com.dotcms.contenttype.model.type.ContentType;
++import com.dotcms.contenttype.transform.contenttype.ContentTypeInternationalization;
++import com.dotcms.languagevariable.business.LanguageVariableAPI;
++import com.dotcms.system.event.local.business.LocalSystemEventsAPI;
++import com.dotmarketing.business.APILocator;
++import com.dotmarketing.business.PermissionAPI;
++import com.dotmarketing.business.RelationshipAPI;
++import com.dotmarketing.business.UserAPI;
++import com.dotmarketing.exception.DotRuntimeException;
++import com.dotmarketing.portlets.contentlet.business.ContentletAPI;
++import com.liferay.portal.model.User;
++import org.junit.BeforeClass;
++import org.junit.Test;
++
++import java.net.ConnectException;
++import java.util.Map;
++
++import static com.dotcms.util.CollectionsUtils.map;
++import static org.mockito.Matchers.*;</code></pre>
+<blockquote>
+<p><strong>dev-dotcms</strong>: Issue found: Avoid unused imports such as &#x27;org.mockito.Matchers&#x27;</p>
+</blockquote>
+<h3>Improved Code</h3>
+<p>Not found</p>
+
+<div id="diff">
+  <!--diff2html-diff-->
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,65 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/styles/github.min.css" />
+  <!--diff2html-css-->
+  <!--diff2html-js-ui-->
+  <link rel="stylesheet" href="https://rawcdn.githack.com/jasonm23/markdown-css-themes/a2b4fd6d5627e4536a789b1feb46d94cd841f164/markdown.css" />
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const targetElement = document.getElementById('diff');
+      const diff2htmlUi = new Diff2HtmlUI(targetElement);
+      diff2html-fileListToggle
+      //diff2html-synchronisedScroll
+      //diff2html-highlightCode
+    });
+  </script>
+  <style>
+    body {
+      width: 90%;
+      max-width: unset;
+    }
+    pre code {
+      display: block;
+      background: #E8E8E8;
+      font-size: small;
+      white-space: pre;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      min-width: 100px;
+      max-height: 250px;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+<h2>hhru/nuts-and-bolts - PR 265</h2>
+<p><strong>Title</strong>: HH-117779 decrease hikari validationTimeout</p>
+<h3>Code Review</h3>
+<p>Inline Review ID - <a href="https://github.com/hhru/nuts-and-bolts/pull/265#discussion_r503992835">MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDUwMzk5MjgzNQ==</a></p>
+<p>Original Commit - <a href="https://github.com/hhru/nuts-and-bolts/commit/1cba231a6fc60e74e8b14e44188a435b4556f2cd">1cba231a6fc60e74e8b14e44188a435b4556f2cd</a></p>
+<pre><code>nab-data-source/src/main/java/ru/hh/nab/datasource/DataSourceFactory.java
+
+@@ -72,7 +74,10 @@ private static HikariConfig createBaseHikariConfig(String dataSourceName, FileSe
+     config.setPassword(dataSourceSettings.getString(PASSWORD));
+     config.setPoolName(dataSourceName);
+     config.setReadOnly(false);
+-    config.setValidationTimeout(config.getConnectionTimeout() + DEFAULT_VALIDATION_TIMEOUT_INCREMENT_MS);
++
++    long validationTimeoutMs = Math.round(config.getConnectionTimeout() * DEFAULT_VALIDATION_TIMEOUT_RATIO);
++    config.setValidationTimeout(Math.max(validationTimeoutMs, HIKARI_MIN_VALIDATION_TIMEOUT_MS));</code></pre>
+<blockquote>
+<p><strong>dzharikhin</strong>: константы в хикари нет?</p>
+<p><strong>Powerrr</strong>: к сожалению, не нашёл</p>
+</blockquote>
+<h3>Improved Code</h3>
+<p>Not found</p>
+
+<div id="diff">
+  <!--diff2html-diff-->
+</div>
+
+</body>
+
+</html>

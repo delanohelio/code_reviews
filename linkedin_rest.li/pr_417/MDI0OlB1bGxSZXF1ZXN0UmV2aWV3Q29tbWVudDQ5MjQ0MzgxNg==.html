@@ -1,0 +1,66 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/styles/github.min.css" />
+  <!--diff2html-css-->
+  <!--diff2html-js-ui-->
+  <link rel="stylesheet" href="https://rawcdn.githack.com/jasonm23/markdown-css-themes/a2b4fd6d5627e4536a789b1feb46d94cd841f164/markdown.css" />
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const targetElement = document.getElementById('diff');
+      const diff2htmlUi = new Diff2HtmlUI(targetElement);
+      diff2html-fileListToggle
+      //diff2html-synchronisedScroll
+      //diff2html-highlightCode
+    });
+  </script>
+  <style>
+    body {
+      width: 90%;
+      max-width: unset;
+    }
+    pre code {
+      display: block;
+      background: #E8E8E8;
+      font-size: small;
+      white-space: pre;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      min-width: 100px;
+      max-height: 250px;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+<h2>linkedin/rest.li - PR 417</h2>
+<p><strong>Title</strong>: Optimize schema parsing by reusing ParseResult instances</p>
+<h3>Code Review</h3>
+<p>Inline Review ID - <a href="https://github.com/linkedin/rest.li/pull/417#discussion_r492443816">MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQ5MjQ0MzgxNg==</a></p>
+<p>Original Commit - <a href="https://github.com/linkedin/rest.li/commit/939460b48c98f400e7f58b66222d2a2e38ac3d51">939460b48c98f400e7f58b66222d2a2e38ac3d51</a></p>
+<pre><code>generator/src/main/java/com/linkedin/pegasus/generator/FileFormatDataSchemaParser.java
+
+@@ -48,7 +48,8 @@
+  * @author Keren Jin
+  * @author Joe Betz
+  */
+-public class FileFormatDataSchemaParser {
++public class FileFormatDataSchemaParser
++{
+   static final String SCHEMA_PATH_PREFIX = SchemaDirectoryName.PEGASUS.getName() + &quot;/&quot;;
+   static final String EXTENSION_PATH_ENTRY = SchemaDirectoryName.EXTENSIONS.getName() + &quot;/&quot;;</code></pre>
+<blockquote>
+<p><strong>nickibi</strong>: Do you mind removing this unused constant in your PR?</p>
+<p><strong>evanw555</strong>: It&#x27;s package-private, so theoretically it can be referenced by a subclass. I can open a separate PR and label it as backward-incompatible.</p>
+</blockquote>
+<h3>Improved Code</h3>
+<p>Not found</p>
+
+<div id="diff">
+  <!--diff2html-diff-->
+</div>
+
+</body>
+
+</html>

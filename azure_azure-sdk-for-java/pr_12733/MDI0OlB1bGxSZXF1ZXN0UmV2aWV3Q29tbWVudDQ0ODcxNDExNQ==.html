@@ -1,0 +1,68 @@
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/styles/github.min.css" />
+  <!--diff2html-css-->
+  <!--diff2html-js-ui-->
+  <link rel="stylesheet" href="https://rawcdn.githack.com/jasonm23/markdown-css-themes/a2b4fd6d5627e4536a789b1feb46d94cd841f164/markdown.css" />
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const targetElement = document.getElementById('diff');
+      const diff2htmlUi = new Diff2HtmlUI(targetElement);
+      diff2html-fileListToggle
+      //diff2html-synchronisedScroll
+      //diff2html-highlightCode
+    });
+  </script>
+  <style>
+    body {
+      width: 90%;
+      max-width: unset;
+    }
+    pre code {
+      display: block;
+      background: #E8E8E8;
+      font-size: small;
+      white-space: pre;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      min-width: 100px;
+      max-height: 250px;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+<h2>azure/azure-sdk-for-java - PR 12733</h2>
+<p><strong>Title</strong>: Rename to support non text element references</p>
+<h3>Code Review</h3>
+<p>Inline Review ID - <a href="https://github.com/Azure/azure-sdk-for-java/pull/12733#discussion_r448714115">MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQ0ODcxNDExNQ==</a></p>
+<p>Original Commit - <a href="https://github.com/azure/azure-sdk-for-java/commit/5436e6d296d4d9c4ea63af391e2b9bd4800b87df">5436e6d296d4d9c4ea63af391e2b9bd4800b87df</a></p>
+<pre><code>sdk/formrecognizer/azure-ai-formrecognizer/src/test/java/com/azure/ai/formrecognizer/FormRecognizerAsyncClientTest.java
+
+@@ -219,39 +219,39 @@ public void recognizeReceiptInvalidSourceUrl(HttpClient httpClient, FormRecogniz
+     }
+
+     /**
+-     * Verifies receipt data for a document using source as file url and include content when includeTextContent is
++     * Verifies receipt data for a document using source as file url and include content when includeFieldElements is
+      * true.
+      */
+     @ParameterizedTest(name = DISPLAY_NAME_WITH_ARGUMENTS)
+     @MethodSource(&quot;com.azure.ai.formrecognizer.TestUtils#getTestParameters&quot;)
+     public void recognizeReceiptFromUrlTextContent(HttpClient httpClient,</code></pre>
+<blockquote>
+<p><strong>maririos</strong>: should this test be renamed too? same the description of it?</p>
+<p><strong>maririos</strong>: and same for other tests</p>
+</blockquote>
+<h3>Improved Code</h3>
+<p>Not found</p>
+
+<div id="diff">
+  <!--diff2html-diff-->
+</div>
+
+</body>
+
+</html>
