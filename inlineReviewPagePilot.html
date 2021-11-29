@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Title</title>
+  <title>Understandability Improvement</title>
   <!-- Make sure to load the highlight.js CSS file before the Diff2Html CSS file -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/github.min.css"/>
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"/>
@@ -128,6 +128,8 @@
         comments = [inline_comment].concat(inline_comment["replies"]);
       }
       const comments_text = comments.map(comment => `**${comment.author}**: ${comment.bodyText}`).join("\n\n")
+      console.log(comments_text)
+
 
       const repository_name = pr_data["pr_url"].split("/").slice(3, 5).join("/");
       const pr_number = pr_data["pr_number"];
@@ -142,12 +144,11 @@
       inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
       //inlineReviewInfo += `<pre><code>${inline_comment.path}\n\n${inline_comment.diffHunk}</code></pre>\n`
-      inlineReviewInfo += `<div id="chunk"></div>\n\n`
-      inlineReviewInfo += comments_text.split("\n").map(comment_line => `> ${comment_line}`).join("\n")
+      inlineReviewInfo += `<div id="chunk" class="blockCode"></div>\n\n`
+      inlineReviewInfo += comments_text.split("\n").map(comment_line => `> ${comment_line.replace(/\s\s+/g, ' ')}`).join("\n")
       inlineReviewInfo += "\n\n"
 
       document.getElementById('inlineReviewInfo').innerHTML = marked.parse(inlineReviewInfo)
-      console.log(createDiff(inline_comment.path, inline_comment.diffHunk))
       document.getElementById('chunk').innerHTML = Diff2Html.html(createDiff(inline_comment.path, inline_comment.diffHunk), params);
 
 
