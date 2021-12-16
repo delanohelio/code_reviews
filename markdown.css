@@ -108,16 +108,3 @@ td { vertical-align: top; }
     p, h2, h3 { orphans: 3; widows: 3; }
     h2, h3 { page-break-after: avoid; }
 }
-
-pre code {
-    display: block;
-    background: #E8E8E8;
-    font-size: small;
-    white-space: pre;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
-    min-width: 100px;
-    max-height: 250px;
-    padding: 0;
-}

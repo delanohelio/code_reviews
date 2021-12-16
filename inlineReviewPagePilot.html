@@ -36,6 +36,11 @@
           var paramName = a[0];
           var paramValue = typeof (a[1]) === 'undefined' ? true : a[1];
 
+          //cast
+          paramValue = paramValue == "true" ? true : paramValue
+          paramValue = paramValue == "false" ? false : paramValue
+          paramValue = isNaN(parseInt(paramValue)) ? paramValue : parseInt(paramValue)
+
           // (optional) keep case consistent
           //paramName = paramName.toLowerCase();
           if (typeof paramValue === 'string') paramValue = paramValue;
@@ -112,16 +117,55 @@
       }
       return changed_code_map;
     }
+
+    var params
+    function toogleChunkFormat() {
+      const toogleChunkFormatButton = document.getElementById('toogleChunkFormat');
+      params.outputFormat = toogleChunkFormatButton.innerText;
+      drawInlineReviewCodeChunk();
+      toogleChunkFormatButton.innerText = params.outputFormat == "line-by-line" ? "side-by-side" : "line-by-line";
+    }
+
+    var diff_string;
+    function drawInlineReviewCodeChunk() {
+      const blockCodeElement = document.getElementById('chunk')
+      blockCodeElement.innerHTML = Diff2Html.html(diff_string, params);
+      drawCodeLines()
+    }
+
+    function toogleChunkLimit() {
+      const toogleChunkLimitButton = document.getElementById('toogleChunkLimit')
+      params.showAllDiff = !params.showAllDiff
+      toogleChunkLimitButton.innerText = params.showAllDiff ? "collapse diff" : "show all diff"
+      drawCodeLines()
+    }
+
+    function drawCodeLines() {
+      const blockCodeElement = document.getElementById('chunk')
+      const diffTables = blockCodeElement.getElementsByClassName("d2h-diff-tbody")
+      for (const diffTable of diffTables) {
+        const codeLines = diffTable.getElementsByTagName("tr")
+        if (params.showTotalLines < codeLines.length - 1) {
+          for (let index = 1; index < codeLines.length - params.showTotalLines; ++index) {
+            codeLines[index].hidden = !params.showAllDiff
+          }
+        } else {
+          document.getElementById('toogleChunkLimit').hidden = true
+        }
+      }
+    }
+
   </script>
 </head>
 <body>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const params = getAllUrlParams();
+    params = getAllUrlParams();
     console.log(params);
     $.getJSON(params.json, function (pr_data) {
       console.log(pr_data);
-      const inline_comment = pr_data.timeline.find(item => item["id"] === (params.inline + "=="))
+      const inline_comment = pr_data.timeline.find(item => item["id"] === (params.inline + "=="));
+      diff_string = createDiff(inline_comment.path, inline_comment.diffHunk)
 
       let comments = [inline_comment]
       if (inline_comment["replies"]) {
@@ -143,15 +187,31 @@
       inlineReviewInfo += `### Code Review\n`;
       inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
-      //inlineReviewInfo += `<pre><code>${inline_comment.path}\n\n${inline_comment.diffHunk}</code></pre>\n`
-      inlineReviewInfo += `<div id="chunk" class="blockCode"></div>\n\n`
-      inlineReviewInfo += comments_text.split("\n").map(comment_line => `> ${comment_line.replace(/\s\s+/g, ' ')}`).join("\n")
-      inlineReviewInfo += "\n\n"
 
-      document.getElementById('inlineReviewInfo').innerHTML = marked.parse(inlineReviewInfo)
-      document.getElementById('chunk').innerHTML = Diff2Html.html(createDiff(inline_comment.path, inline_comment.diffHunk), params);
+      const inlineReviewInfoElement = document.getElementById('inlineReviewInfo')
+      inlineReviewInfoElement.innerHTML = marked.parse(inlineReviewInfo) + inlineReviewInfoElement.innerHTML
+
+      //inlineReviewComments += `<pre><code>${inline_comment.path}\n\n${inline_comment.diffHunk}</code></pre>\n`
+      let inlineReviewComments = comments_text.split("\n").map(comment_line => `> ${comment_line.replace(/\s\s+/g, ' ')}`).join("\n")
+      inlineReviewComments += "\n\n"
+      document.getElementById('comments').innerHTML = marked.parse(inlineReviewComments)
 
 
+      //default values of params
+      params.drawFileList = "drawFileList" in params ? params.drawFileList : false;
+      params.outputFormat = "outputFormat" in params ? params.outputFormat : "line-by-line";
+      params.showAllDiff = "showAllDiff" in params ? params.showAllDiff : false;
+      params.showTotalLines = "showTotalLines" in params ? params.showTotalLines : 10;
+
+      const toogleChunkFormatButton = document.getElementById('toogleChunkFormat')
+      toogleChunkFormatButton.innerText = params.outputFormat == "line-by-line" ? "side-by-side" : "line-by-line"
+
+      const toogleChunkLimitButton = document.getElementById('toogleChunkLimit')
+      toogleChunkLimitButton.innerText = params.showAllDiff ? "collapse diff" : "show all diff"
+
+      drawInlineReviewCodeChunk()
+
+      /**
       let code_changes = {}
       let changesAfterReview = "### Changes after review\n"
       if (inline_comment["revised_code"]) {
@@ -164,6 +224,7 @@
       }else{
         changesAfterReview += "Not Found"
       }
+       **/
 
       //document.getElementById('changesAfterReview').innerHTML = marked.parse(changesAfterReview)
 
@@ -174,7 +235,14 @@
     });
   });
 </script>
-<div id="inlineReviewInfo"></div>
+<div id="inlineReviewInfo">
+  <div id="diffHTMLArea">
+    <button onclick="toogleChunkFormat()" id="toogleChunkFormat" type="button"></button>
+    <button onclick="toogleChunkLimit()" id="toogleChunkLimit" type="button"></button>
+    <div id="chunk" class="blockCode">
+  </div>
+  <div id="comments"></div>
+</div>
 <div id="changesAfterReview" hidden></div>
 </body>
 </html>
