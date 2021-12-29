@@ -180,6 +180,7 @@
       const pr_title = pr_data["pr_title"];
 
       commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
+      path_url_factory = (path, commit) => `https://github.com/${repository_name}/blob/${commit}/${path}`;
 
 
       let inlineReviewInfo = `## ${repository_name} - PR ${pr_number}\n`;
@@ -187,6 +188,7 @@
       inlineReviewInfo += `### Code Review\n`;
       inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
+      inlineReviewInfo += `This version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, inline_comment.originalCommit)})\n\n`;
 
       const inlineReviewInfoElement = document.getElementById('inlineReviewInfo')
       inlineReviewInfoElement.innerHTML = marked.parse(inlineReviewInfo) + inlineReviewInfoElement.innerHTML
