@@ -167,26 +167,27 @@
       const inline_comment = pr_data.timeline.find(item => item["id"] === (params.inline + "=="));
       diff_string = createDiff(inline_comment.path, inline_comment.diffHunk)
 
-      let comments = [inline_comment]
-      if (inline_comment["replies"]) {
-        comments = [inline_comment].concat(inline_comment["replies"]);
-      }
-      const comments_text = comments.map(comment => `**${comment.author}**: ${comment.bodyText}`).join("\n\n")
-      console.log(comments_text)
-
-
       const repository_name = pr_data["pr_url"].split("/").slice(3, 5).join("/");
       const pr_number = pr_data["pr_number"];
       const pr_title = pr_data["pr_title"];
       const pr_author = pr_data["pr_author"];
 
-      commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
-      path_url_factory = (path, commit) => `https://github.com/${repository_name}/blob/${commit}/${path}`;
+      let comments = [inline_comment]
+      if (inline_comment["replies"]) {
+        comments = [inline_comment].concat(inline_comment["replies"]);
+      }
+      //const comments_text = comments.map(comment => `**${comment.author}**: ${comment.bodyText}`).join("\n\n")
+      const comment_class = comment_author => comment_author === pr_author ? "developer" : "reviewer"
+      const comments_text = comments.map(comment => `<b class=${comment_class(comment.author)}>${comment.author}</b>: ${comment.bodyText}`).join("\n\n")
+      console.log(comments_text)
+
+      const commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
+      const path_url_factory = (path, commit) => `https://github.com/${repository_name}/blob/${commit}/${path}`;
 
 
       let inlineReviewInfo = `## ${repository_name} - PR ${pr_number}\n`;
       inlineReviewInfo += `**Title**: ${pr_title}\n\n`;
-      inlineReviewInfo += `**Author**: ${pr_author}\n`;
+      inlineReviewInfo += `**Author**: <span class=developer>${pr_author}</span>\n`;
       inlineReviewInfo += `### Code Review\n`;
       inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
@@ -245,6 +246,7 @@
     <button onclick="toogleChunkLimit()" id="toogleChunkLimit" type="button"></button>
     <div id="chunk" class="blockCode">
   </div>
+    Legend: <span class="developer">Developer</span>   <span class="reviewer">Reviewer</span>
   <div id="comments"></div>
 </div>
 <div id="changesAfterReview" hidden></div>
