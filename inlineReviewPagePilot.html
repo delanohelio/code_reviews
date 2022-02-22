@@ -118,39 +118,80 @@
       return changed_code_map;
     }
 
+    function makeDiffCodeDiv(elementNameId) {
+
+      const divDiffCode = Object.assign(document.createElement('div'), {
+        id: elementNameId,
+      });
+
+      const toggleFormatButton = Object.assign(document.createElement('button'), {
+        id: 'toggleChunkFormat',
+        type: "button",
+      });
+
+      toggleFormatButton.onclick = () => toggleChunkFormat(elementNameId)
+
+      const toggleLimitButton = Object.assign(document.createElement('button'), {
+        id: 'toggleChunkLimit',
+        type: "button",
+      });
+
+      toggleLimitButton.onclick = () => toggleChunkLimit(elementNameId)
+
+      const chunkDiv = Object.assign(document.createElement('div'), {
+        id: 'chunk',
+        className: `blockCode`
+      });
+
+      divDiffCode.appendChild(toggleFormatButton)
+      divDiffCode.appendChild(toggleLimitButton)
+      divDiffCode.appendChild(chunkDiv)
+
+      return divDiffCode;
+
+    }
+
     var params
-    function toogleChunkFormat() {
-      const toogleChunkFormatButton = document.getElementById('toogleChunkFormat');
-      params.outputFormat = toogleChunkFormatButton.innerText;
-      drawInlineReviewCodeChunk();
-      toogleChunkFormatButton.innerText = params.outputFormat == "line-by-line" ? "side-by-side" : "line-by-line";
+    function toggleChunkFormat(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const toggleChunkFormatButton = diffCodeDiv.querySelector("#toggleChunkFormat");
+      drawInlineReviewCodeChunk(elementId);
+      toggleChunkFormatButton.innerText = toggleChunkFormatButton.innerText == "line-by-line" ? "side-by-side" : "line-by-line";
     }
 
     var diff_string;
-    function drawInlineReviewCodeChunk() {
-      const blockCodeElement = document.getElementById('chunk')
-      blockCodeElement.innerHTML = Diff2Html.html(diff_string, params);
-      drawCodeLines()
+    function drawInlineReviewCodeChunk(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const blockCodeElement = diffCodeDiv.querySelector("#chunk")
+      const toggleChunkFormatButton = diffCodeDiv.querySelector("#toggleChunkFormat");
+      const diff_params = {...params};
+      diff_params.outputFormat = toggleChunkFormatButton.innerText;
+      blockCodeElement.innerHTML = Diff2Html.html(diff_string[elementId], diff_params);
+      drawCodeLines(elementId)
     }
 
-    function toogleChunkLimit() {
-      const toogleChunkLimitButton = document.getElementById('toogleChunkLimit')
+    function toggleChunkLimit(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const toggleChunkLimitButton = diffCodeDiv.querySelector('#toggleChunkLimit')
       params.showAllDiff = !params.showAllDiff
-      toogleChunkLimitButton.innerText = params.showAllDiff ? "collapse diff" : "show all diff"
-      drawCodeLines()
+      toggleChunkLimitButton.innerText = params.showAllDiff ? "collapse diff" : "show all diff"
+      drawCodeLines(elementId)
     }
 
-    function drawCodeLines() {
-      const blockCodeElement = document.getElementById('chunk')
+    function drawCodeLines(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const blockCodeElement = diffCodeDiv.querySelector("#chunk")
       const diffTables = blockCodeElement.getElementsByClassName("d2h-diff-tbody")
       for (const diffTable of diffTables) {
         const codeLines = diffTable.getElementsByTagName("tr")
+        const toggleChunkLimit = diffCodeDiv.querySelector('#toggleChunkLimit')
         if (params.showTotalLines < codeLines.length - 1) {
           for (let index = 1; index < codeLines.length - params.showTotalLines; ++index) {
             codeLines[index].hidden = !params.showAllDiff
           }
+          toggleChunkLimit.hidden = false
         } else {
-          document.getElementById('toogleChunkLimit').hidden = true
+          toggleChunkLimit.hidden = true
         }
       }
     }
@@ -165,7 +206,6 @@
     $.getJSON(params.json, function (pr_data) {
       console.log(pr_data);
       const inline_comment = pr_data.timeline.find(item => item["id"] === (params.inline + "=="));
-      diff_string = createDiff(inline_comment.path, inline_comment.diffHunk)
 
       const repository_name = pr_data["pr_url"].split("/").slice(3, 5).join("/");
       const pr_number = pr_data["pr_number"];
@@ -208,47 +248,55 @@
       params.showAllDiff = "showAllDiff" in params ? params.showAllDiff : false;
       params.showTotalLines = "showTotalLines" in params ? params.showTotalLines : 10;
 
-      const toogleChunkFormatButton = document.getElementById('toogleChunkFormat')
-      toogleChunkFormatButton.innerText = params.outputFormat == "line-by-line" ? "side-by-side" : "line-by-line"
+      const diffChunkCodeId = "diffChunkCode"
+      const diffHTMLArea = document.getElementById('diffHTMLArea')
+      diffHTMLArea.prepend(makeDiffCodeDiv(diffChunkCodeId))
+      diff_string = {}
+      diff_string[diffChunkCodeId] = createDiff(inline_comment.path, inline_comment.diffHunk)
+      drawInlineReviewCodeChunk(diffChunkCodeId)
 
-      const toogleChunkLimitButton = document.getElementById('toogleChunkLimit')
-      toogleChunkLimitButton.innerText = params.showAllDiff ? "collapse diff" : "show all diff"
 
-      drawInlineReviewCodeChunk()
-
-      /**
       let code_changes = {}
-      let changesAfterReview = "### Changes after review\n"
+      let changesAfterReview = "### Patch after this code review\n"
       if (inline_comment["revised_code"]) {
         code_changes = createChangedCodeMap(inline_comment.revised_code)
 
         for (let revised_code_commit in code_changes){
-          changesAfterReview += `Commit - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})`
-          changesAfterReview += `<div id="changes_${revised_code_commit}"></div>`
+          changesAfterReview += `Commit - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})\n\n`
+          changesAfterReview += `This version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, revised_code_commit)})\n\n`;
+          changesAfterReview += `<div id="diffHTMLArea_${revised_code_commit}"></div>`
+          //changesAfterReview += makeDiffCodeDiv("changes_"+revised_code_commit)
         }
       }else{
         changesAfterReview += "Not Found"
       }
-       **/
 
-      //document.getElementById('changesAfterReview').innerHTML = marked.parse(changesAfterReview)
 
-      //for (let commit in code_changes) {
+      document.getElementById('changesAfterReview').innerHTML = marked.parse(changesAfterReview)
+
+      for (let commit in code_changes) {
+        let diffHtmlArea = document.getElementById("diffHTMLArea_"+commit)
+        let diffCodeReviewId = "changes_"+commit
+        diffHtmlArea.prepend(makeDiffCodeDiv(diffCodeReviewId))
+        diff_string[diffCodeReviewId] = createDiffString(code_changes[commit])
+        drawInlineReviewCodeChunk(diffCodeReviewId)
         //document.getElementById(`changes_${commit}`).innerHTML = Diff2Html.html(createDiffString(code_changes[commit]), params);
-      //}
+      }
+
+      const toggleChunkFormatButtonText = params.outputFormat == "line-by-line" ? "side-by-side" : "line-by-line"
+      document.querySelectorAll("#toggleChunkFormat").forEach(e => e.textContent = toggleChunkFormatButtonText)
+
+      const toggleChunkLimitButtonText = params.showAllDiff ? "collapse diff" : "show all diff"
+      document.querySelectorAll("#toggleChunkLimit").forEach(e => e.textContent = toggleChunkLimitButtonText)
 
     });
   });
 </script>
 <div id="inlineReviewInfo">
-  <div id="diffHTMLArea">
-    <button onclick="toogleChunkFormat()" id="toogleChunkFormat" type="button"></button>
-    <button onclick="toogleChunkLimit()" id="toogleChunkLimit" type="button"></button>
-    <div id="chunk" class="blockCode">
-  </div>
-    Legend: <span class="developer">Developer</span>   <span class="reviewer">Reviewer</span>
+  <div id="diffHTMLArea"/>
+  Legend: <span class="developer">Developer</span>   <span class="reviewer">Reviewer</span>
   <div id="comments"></div>
 </div>
-<div id="changesAfterReview" hidden></div>
+<div id="changesAfterReview"></div>
 </body>
 </html>
