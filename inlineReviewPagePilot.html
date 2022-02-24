@@ -196,6 +196,18 @@
       }
     }
 
+    function togglePatchShow() {
+      const patchShowButton = document.getElementById("patch_show_button");
+      const patchDiv = document.getElementById("changesAfterReview");
+      if (patchShowButton.textContent == "Show") {
+        patchDiv.hidden = false;
+        patchShowButton.textContent = "Hide";
+      }else {
+        patchDiv.hidden = true;
+        patchShowButton.textContent = "Show";
+      }
+    }
+
   </script>
 </head>
 <body>
@@ -257,21 +269,25 @@
 
 
       let code_changes = {}
-      let changesAfterReview = "### Patch after this code review\n"
+      let changesAfterReview = ""
       if (inline_comment["revised_code"]) {
         code_changes = createChangedCodeMap(inline_comment.revised_code)
 
         for (let revised_code_commit in code_changes){
           changesAfterReview += `Commit - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})\n\n`
           changesAfterReview += `This version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, revised_code_commit)})\n\n`;
-          changesAfterReview += `<div id="diffHTMLArea_${revised_code_commit}"></div>`
+          changesAfterReview += `<div id="diffHTMLArea_${revised_code_commit}"></div>\n\n`
           //changesAfterReview += makeDiffCodeDiv("changes_"+revised_code_commit)
         }
       }else{
+        const patchShowButton = document.getElementById("patch_show_button");
+        patchShowButton.hidden = true;
+        const patchDiv = document.getElementById("changesAfterReview");
+        patchDiv.hidden = false;
         changesAfterReview += "Not Found"
       }
 
-
+      console.log(changesAfterReview)
       document.getElementById('changesAfterReview').innerHTML = marked.parse(changesAfterReview)
 
       for (let commit in code_changes) {
@@ -297,6 +313,7 @@
   Legend: <span class="developer">Developer</span>   <span class="reviewer">Reviewer</span>
   <div id="comments"></div>
 </div>
-<div id="changesAfterReview"></div>
+<h3>Patches after this code review <button id="patch_show_button" onclick="togglePatchShow()">Show</button></h3>
+<div id="changesAfterReview" hidden></div>
 </body>
 </html>
