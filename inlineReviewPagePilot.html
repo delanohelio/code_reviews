@@ -255,22 +255,30 @@
 
       const commits = pr_data.timeline.filter(item => item["oid"]);
       const original_commit = pr_data.timeline.find(item => item["oid"] === inline_comment.originalCommit);
-      const original_commit_date = new Date(original_commit.committedDate);
-      let commitsContent = "<table class='commits'>\n\n";
-      console.log(original_commit_date)
+
+      let commitsContent = "";
+      let original_commit_date
+      if (original_commit) {
+        original_commit_date = new Date(original_commit.committedDate);
+      }else{
+        commitsContent += "The original commit is not between this list of commits.\n\n"
+      }
+
+      commitsContent += "<table class='commits'>\n\n";
       for (let i in commits) {
         const commit_item = commits[i];
         const commit_item_date = new Date(commit_item.committedDate);
         console.log(commit_item_date)
 
-        let commit_order
-        if (original_commit.oid === commit_item.oid){
-          commit_order = 'original'
-        }
-        else if (commit_item_date > original_commit_date) {
-          commit_order = 'after'
-        } else {
-          commit_order = 'before'
+        let commit_order = ''
+        if (original_commit) {
+          if (original_commit.oid === commit_item.oid) {
+            commit_order = 'original'
+          } else if (commit_item_date > original_commit_date) {
+            commit_order = 'after'
+          } else {
+            commit_order = 'before'
+          }
         }
 
         commitsContent += `<tr class='commits ${commit_order}'>`;
