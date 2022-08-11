@@ -111,3 +111,26 @@ td { vertical-align: top; }
     p, h2, h3 { orphans: 3; widows: 3; }
     h2, h3 { page-break-after: avoid; }
 }
+
+.commits{
+    border: 1px solid;
+    padding-left: 15px;;
+}
+.commits .oid{
+    width: 30%;
+}
+.commits .desc{
+    vertical-align: middle;
+}
+
+.before {
+    background-color: #e0e0e0;
+}
+
+.original {
+    background-color: #c8e9f9;
+}
+
+.after {
+    background-color: #d9ffde;
+}
