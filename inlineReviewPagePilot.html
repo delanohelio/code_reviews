@@ -236,6 +236,8 @@
       const commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
       const path_url_factory = (path, commit) => `https://github.com/${repository_name}/blob/${commit}/${path}`;
 
+      const commits = pr_data.timeline.filter(item => item["oid"]);
+      const original_commit = pr_data.timeline.find(item => item["oid"] === inline_comment.originalCommit);
 
       let inlineReviewInfo = `## ${repository_name} - PR ${pr_number}\n`;
       inlineReviewInfo += `**Title**: ${pr_title}\n\n`;
@@ -244,6 +246,7 @@
       inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
       inlineReviewInfo += `This version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, inline_comment.originalCommit)})\n\n`;
+      inlineReviewInfo += `The merged version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, commits.slice(-1)[0].oid)})\n\n`;
 
       const inlineReviewInfoElement = document.getElementById('inlineReviewInfo')
       inlineReviewInfoElement.innerHTML = marked.parse(inlineReviewInfo) + inlineReviewInfoElement.innerHTML
@@ -252,9 +255,6 @@
       let inlineReviewComments = comments_text.split("\n").map(comment_line => `> ${comment_line.replace(/\s\s+/g, ' ')}`).join("\n")
       inlineReviewComments += "\n\n"
       document.getElementById('comments').innerHTML = marked.parse(inlineReviewComments)
-
-      const commits = pr_data.timeline.filter(item => item["oid"]);
-      const original_commit = pr_data.timeline.find(item => item["oid"] === inline_comment.originalCommit);
 
       let commitsContent = "";
       let original_commit_date
@@ -268,7 +268,6 @@
       for (let i in commits) {
         const commit_item = commits[i];
         const commit_item_date = new Date(commit_item.committedDate);
-        console.log(commit_item_date)
 
         let commit_order = ''
         if (original_commit) {
