@@ -236,6 +236,10 @@
       const commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
       const path_url_factory = (path, commit) => `https://github.com/${repository_name}/blob/${commit}/${path}`;
 
+      const repository_name_json = params.json.split("/").at(-2)
+      const filename = inline_comment.path.split("/").at(-1)
+      const spoon_url= `https://github.com/delanohelio/code_reviews/blob/gh-pages/spooned/${repository_name_json}/${inline_comment.id}/${filename}`;
+
       const commits = pr_data.timeline.filter(item => item["oid"]);
       const original_commit = pr_data.timeline.find(item => item["oid"] === inline_comment.originalCommit);
 
@@ -247,6 +251,8 @@
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
       inlineReviewInfo += `This version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, inline_comment.originalCommit)})\n\n`;
       inlineReviewInfo += `The merged version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, commits.slice(-1)[0].oid)})\n\n`;
+      inlineReviewInfo += `The AST version of the file - [${inline_comment.path}](${spoon_url})\n\n`;
+      //https://github.com/delanohelio/code_reviews/blob/gh-pages/spooned/alibaba_sentinel/MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQ0MTMyMTU1Nw%3D%3D/DubboOrigin.java
 
       const inlineReviewInfoElement = document.getElementById('inlineReviewInfo')
       inlineReviewInfoElement.innerHTML = marked.parse(inlineReviewInfo) + inlineReviewInfoElement.innerHTML
