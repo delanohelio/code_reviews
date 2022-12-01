@@ -1,0 +1,1 @@
+[CompilationUnitImpl][CtClassImpl]class StandardErrorCode {}
