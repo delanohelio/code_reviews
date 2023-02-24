@@ -2,15 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-    <!-- Make sure to load the highlight.js CSS file before the Diff2Html CSS file -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/github.min.css"/>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"/>
-    <link rel="stylesheet" type="text/css" href="markdown.css"/>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+    <title>Redirect Inline Review by ID</title>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
     <script>
         function getAllUrlParams(url) {
             // get query string from url (optional) or window
@@ -35,6 +28,11 @@
                     // set parameter name and value (use 'true' if empty)
                     var paramName = a[0];
                     var paramValue = typeof (a[1]) === 'undefined' ? true : a[1];
+
+                    //cast
+                    paramValue = paramValue == "true" ? true : paramValue
+                    paramValue = paramValue == "false" ? false : paramValue
+                    paramValue = isNaN(parseInt(paramValue)) ? paramValue : parseInt(paramValue)
 
                     // (optional) keep case consistent
                     //paramName = paramName.toLowerCase();
@@ -74,96 +72,36 @@
             }
             return obj;
         }
-
-        function createDiffString(changed_code) {
-            return changed_code[0]["header"] + "\n" + changed_code.map(code_change => code_change.chunk).join("\n")
-        }
-
-        function mergeObjectWithArrays(obj1, obj2) {
-            for (let key in obj2) {
-                if (key in obj1) {
-                    obj1[key] = [...obj1[key], ...obj2[key]]
-                }else{
-                    obj1[key] = obj2[key]
-                }
-            }
-            return obj1
-        }
-
-
-        function createChangedCodeMap(revised_code) {
-            let changed_code_map = {}
-            const revised_code_commit = revised_code.commit
-            const changed_code = revised_code.changed_code
-            changed_code_map[revised_code_commit] = changed_code.map(({header, chunk}) => ({header, chunk}))
-
-            for (let index in changed_code) {
-                const changed_code_chunk = changed_code[index];
-                if (changed_code_chunk.next_change) {
-                    changed_code_map = mergeObjectWithArrays(changed_code_map, createChangedCodeMap(changed_code_chunk.next_change))
-                }
-            }
-            return changed_code_map;
-        }
     </script>
 </head>
 <body>
+<h1 id="inlineReviewInfo"></h1>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const params = getAllUrlParams();
-        console.log(params);
-        $.getJSON(params.json, function (pr_data) {
-            console.log(pr_data);
-            const inline_comment = pr_data.timeline.find(item => item["id"] === (params.inline + "=="))
+        const inlineReviewId = params["id"] + "==";
 
-            let comments = [inline_comment]
-            if (inline_comment["replies"]) {
-                comments = [inline_comment].concat(inline_comment["replies"]);
-            }
-            const comments_text = comments.map(comment => `**${comment.author}**: ${comment.bodyText}`).join("\n\n")
+        const inlineReviewInfoElement = document.getElementById('inlineReviewInfo');
+        inlineReviewInfoElement.innerText = `Searching by inline review: ${inlineReviewId}`;
 
-            const repository_name = pr_data["pr_url"].split("/").slice(3, 5).join("/");
-            const pr_number = pr_data["pr_number"];
-            const pr_title = pr_data["pr_title"];
+        const selectedSampleURL = "selected-sample.json";
 
-            commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
+        $.getJSON(selectedSampleURL, function (selectedSample) {
+            const inlineReviewData = selectedSample[inlineReviewId];
 
-
-            let inlineReviewInfo = `## ${repository_name} - PR ${pr_number}\n`;
-            inlineReviewInfo += `**Title**: ${pr_title}\n`;
-            inlineReviewInfo += `### Code Review\n`;
-            inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
-            inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
-            inlineReviewInfo += `<pre><code>${inline_comment.path}\n\n${inline_comment.diffHunk}</code></pre>\n`
-            inlineReviewInfo += comments_text.split("\n").map(comment_line => `> ${comment_line}`).join("\n")
-            inlineReviewInfo += "\n\n"
-
-            document.getElementById('inlineReviewInfo').innerHTML = marked.parse(inlineReviewInfo)
-
-
-            let code_changes = {}
-            let changesAfterReview = "### Changes after review\n"
-            if (inline_comment["revised_code"]) {
-                code_changes = createChangedCodeMap(inline_comment.revised_code)
-
-                for (let revised_code_commit in code_changes){
-                    changesAfterReview += `Commit - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})`
-                    changesAfterReview += `<div id="changes_${revised_code_commit}"></div>`
-                }
+            if (inlineReviewData) {
+                const inlineReviewProject = inlineReviewData["project"].replace("/", "_");
+                const inlineReviewPR = inlineReviewData["pr_number"];
+                const inlineReviewPRJSON = `https://delanohelio.github.io/code_reviews/${inlineReviewProject}/pr_${inlineReviewPR}.json`;
+                const inlineReviewURL = `https://delanohelio.github.io/code_reviews/inlineReviewPagePilot.html?json=${inlineReviewPRJSON}&inline=${inlineReviewId}`
+                inlineReviewInfoElement.innerText = `Redirecting to: ${inlineReviewURL}`;
+                window.location.replace(inlineReviewURL);
             }else{
-                changesAfterReview += "Not Found"
-            }
-
-            document.getElementById('changesAfterReview').innerHTML = marked.parse(changesAfterReview)
-
-            for (let commit in code_changes) {
-                document.getElementById(`changes_${commit}`).innerHTML = Diff2Html.html(createDiffString(code_changes[commit]), params);
+                inlineReviewInfoElement.innerText = `Inline review "${inlineReviewId}" did not find`;
             }
 
         });
     });
 </script>
-<div id="inlineReviewInfo"></div>
-<div id="changesAfterReview"></div>
 </body>
 </html>
