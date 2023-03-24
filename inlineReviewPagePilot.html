@@ -84,6 +84,7 @@
       return changed_code[0]["header"] + "\n" + changed_code.map(code_change => code_change.chunk).join("\n")
     }
 
+
     function createDiff(path, chunk) {
       let diff = `--- a/${path}\n`
       diff += `+++ b/${path}\n`
@@ -100,6 +101,14 @@
         }
       }
       return obj1
+    }
+
+    function createMapFromListOfObjects(list_objects, key) {
+      return Object.fromEntries(list_objects.map(o => [o[key],o]))
+    }
+
+    function parseDate(str_date) {
+      return str_date.split("T")[0];
     }
 
 
@@ -231,28 +240,36 @@
       //const comments_text = comments.map(comment => `**${comment.author}**: ${comment.bodyText}`).join("\n\n")
       const comment_class = comment_author => comment_author === pr_author ? "developer" : "reviewer"
       const comments_text = comments.map(comment => `<b class=${comment_class(comment.author)}>${comment.author}</b>: ${comment.bodyText}`).join("\n\n")
-      console.log(comments_text)
+      //console.log(comments_text)
 
       const commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
+      const history_commits_url_factory = (path, commit) => `https://github.com/${repository_name}/commits/${commit}/${path}`;
       const path_url_factory = (path, commit) => `https://github.com/${repository_name}/blob/${commit}/${path}`;
 
       const repository_name_json = params.json.split("/").at(-2)
       const filename = inline_comment.path.split("/").at(-1)
       const spoon_url= `https://github.com/delanohelio/code_reviews/blob/gh-pages/spooned/${repository_name_json}/${inline_comment.id}/${filename}`;
 
-      const commits = pr_data.timeline.filter(item => item["oid"]);
-      const original_commit = pr_data.timeline.find(item => item["oid"] === inline_comment.originalCommit);
+      const commits_list = pr_data.timeline.filter(item => item["oid"]);
+      const last_commit = commits_list.slice(-1)[0]
+      const merge_commit = "merge_commit" in pr_data ? pr_data.merge_commit : last_commit.oid;
+
+      const commits_map = createMapFromListOfObjects(commits_list, "oid")
+      const original_commit = commits_map[inline_comment.originalCommit]
+
 
       let inlineReviewInfo = `## ${repository_name} - PR ${pr_number}\n`;
       inlineReviewInfo += `**Title**: ${pr_title}\n\n`;
-      inlineReviewInfo += `**Author**: <span class=developer>${pr_author}</span>\n`;
+      inlineReviewInfo += `**Author**: <span class=developer>${pr_author}</span>\n\n`;
+      inlineReviewInfo += `**Creation date**: ${parseDate(pr_data["pr_createdAt"])}\n`;
       inlineReviewInfo += `### Code Review\n`;
       inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
-      inlineReviewInfo += `This version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, inline_comment.originalCommit)})\n\n`;
-      inlineReviewInfo += `The merged version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, commits.slice(-1)[0].oid)})\n\n`;
-      inlineReviewInfo += `The AST version of the file - [${inline_comment.path}](${spoon_url})\n\n`;
-      //https://github.com/delanohelio/code_reviews/blob/gh-pages/spooned/alibaba_sentinel/MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQ0MTMyMTU1Nw%3D%3D/DubboOrigin.java
+      inlineReviewInfo += `[This version of the file (${original_commit.oid})](${path_url_factory(inline_comment.path, inline_comment.originalCommit)})\n\n`;
+      inlineReviewInfo += `[The merged version of the file (${merge_commit})](${path_url_factory(inline_comment.path, merge_commit)})\n\n`;
+      inlineReviewInfo += `[The AST version of the file (Spoon)](${spoon_url})\n\n`;
+      inlineReviewInfo += `[History of changes of this file in this PR](${history_commits_url_factory(inline_comment.path, last_commit.oid)})\n\n`;
+      inlineReviewInfo += `[History of changes of this file in main branch](${history_commits_url_factory(inline_comment.path, "HEAD")})\n\n`;
 
       const inlineReviewInfoElement = document.getElementById('inlineReviewInfo')
       inlineReviewInfoElement.innerHTML = marked.parse(inlineReviewInfo) + inlineReviewInfoElement.innerHTML
@@ -262,7 +279,9 @@
       inlineReviewComments += "\n\n"
       document.getElementById('comments').innerHTML = marked.parse(inlineReviewComments)
 
-      let commitsContent = "";
+      const url_list_commits_pr = `https://github.com/${repository_name}/pull/${pr_number}/commits`;
+
+      let commitsContent = `[List of commits in GitHub](${url_list_commits_pr})`;
       let original_commit_date
       if (original_commit) {
         original_commit_date = new Date(original_commit.committedDate);
@@ -271,8 +290,8 @@
       }
 
       commitsContent += "<table class='commits'>\n\n";
-      for (let i in commits) {
-        const commit_item = commits[i];
+      for (let i in commits_list) {
+        const commit_item = commits_list[i];
         const commit_item_date = new Date(commit_item.committedDate);
 
         let commit_order = ''
@@ -287,7 +306,8 @@
         }
 
         commitsContent += `<tr class='commits ${commit_order}'>`;
-        commitsContent += `<td class="commits oid">\n\n [${commit_item['oid']}](${commit_item['url']}) </td> \n\n <td class="commits desc"> ${commit_item['message']} </td>\n\n`
+        const commit_description = `${commit_item['message'].replaceAll("\n\n", "\n")}`
+        commitsContent += `<td class="commits oid">\n\n [${commit_item['oid']}](${commit_item['url']}) </td> \n\n <td class="commits desc">${commit_description}</td>\n\n`
         commitsContent += "</tr>"
         // commitsContent += '---\n\n'
       }
@@ -311,12 +331,17 @@
       let code_changes = {}
       let changesAfterReview = ""
       if (inline_comment["revised_code"]) {
-        code_changes = createChangedCodeMap(inline_comment.revised_code)
+        code_changes = createChangedCodeMap(inline_comment.revised_code);
 
         for (let revised_code_commit in code_changes){
-          changesAfterReview += `Commit - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})\n\n`
-          changesAfterReview += `This version of the file - [${inline_comment.path}](${path_url_factory(inline_comment.path, revised_code_commit)})\n\n`;
+          const commit_data = commits_map[revised_code_commit];
+          changesAfterReview += "<div style='border-style: groove'>\n\n"
+          changesAfterReview += `**Commit OID** - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})\n\n`
+          changesAfterReview += `**Commit Date** - *${ commit_data.committedDate}*\n\n`
+          changesAfterReview += `**Commit Description** - *${commit_data.message}*\n\n`
+          changesAfterReview += `[This version of the file](${path_url_factory(inline_comment.path, revised_code_commit)})\n\n`;
           changesAfterReview += `<div id="diffHTMLArea_${revised_code_commit}"></div>\n\n`
+          changesAfterReview += "</div>"
           //changesAfterReview += makeDiffCodeDiv("changes_"+revised_code_commit)
         }
       }else{
@@ -330,6 +355,30 @@
       // console.log(changesAfterReview)
       document.getElementById('changesAfterReview').innerHTML = marked.parse(changesAfterReview)
 
+      let changesAfterMerge = "";
+      const commits_in_main = inline_comment["commits_in_main"];
+      if (commits_in_main) {
+        for (let index in commits_in_main){
+          const patch = commits_in_main[index];
+          changesAfterMerge += "<div style='border-style: groove'>\n\n"
+          changesAfterMerge += `**Commit OID** - [${patch.oid}](${commit_url_factory(patch.oid)})\n\n`
+          changesAfterMerge += `**Commit Date** - *${ patch.committedDate}*\n\n`
+          changesAfterMerge += `**Commit Description** - *${patch.message}*\n\n`
+          changesAfterMerge += `[Link to this version of the file](${path_url_factory(inline_comment.path, patch.oid)})\n\n`;
+          changesAfterMerge += `<div id="diffHTMLArea_${patch.oid}"></div>\n\n`
+          changesAfterMerge += "</div>"
+        }
+      }else{
+        const mergePatchShowButton = document.getElementById("full_history_changes");
+        mergePatchShowButton.hidden = true;
+      }
+      document.getElementById('changesAfterMerge').innerHTML = marked.parse(changesAfterMerge)
+
+      const revised_code_in_main = inline_comment["revised_code_in_main"];
+      if (revised_code_in_main) {
+        code_changes = {...code_changes, ...createChangedCodeMap(revised_code_in_main)}
+      }
+
       for (let commit in code_changes) {
         let diffHtmlArea = document.getElementById("diffHTMLArea_"+commit)
         let diffCodeReviewId = "changes_"+commit
@@ -338,7 +387,6 @@
         drawInlineReviewCodeChunk(diffCodeReviewId)
         //document.getElementById(`changes_${commit}`).innerHTML = Diff2Html.html(createDiffString(code_changes[commit]), params);
       }
-
       const toggleChunkFormatButtonText = params.outputFormat == "line-by-line" ? "side-by-side" : "line-by-line"
       document.querySelectorAll("#toggleChunkFormat").forEach(e => e.textContent = toggleChunkFormatButtonText)
 
@@ -358,7 +406,11 @@
   Legend: <span class="before">Before original commit</span>   <span class="original">Original Commit</span> <span class="after">After original commit</span>
   <div id="commits"></div>
 </div>
-<h3>Patches after this code review <button id="patch_show_button" onclick="togglePatchShow('patch_show_button', 'changesAfterReview')">Show</button></h3>
+<h3>Patches in PR after this code review <button id="patch_show_button" onclick="togglePatchShow('patch_show_button', 'changesAfterReview')">Show</button></h3>
 <div id="changesAfterReview" hidden></div>
+<div id="full_history_changes">
+  <h3>Commits and patches in this file from merge to HEAD in main branch of the repository <button id="merge_show_button" onclick="togglePatchShow('merge_show_button', 'changesAfterMerge')">Show</button></h3>
+  <div id="changesAfterMerge" hidden></div>
+</div>
 </body>
 </html>
