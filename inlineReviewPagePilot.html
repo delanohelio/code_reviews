@@ -256,6 +256,7 @@
 
       const commits_map = createMapFromListOfObjects(commits_list, "oid")
       const original_commit = commits_map[inline_comment.originalCommit]
+      const original_commit_oid = original_commit ? original_commit.oid : inline_comment.originalCommit;
 
 
       let inlineReviewInfo = `## ${repository_name} - PR ${pr_number}\n`;
@@ -265,7 +266,7 @@
       inlineReviewInfo += `### Code Review\n`;
       inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
       inlineReviewInfo += `Original Commit - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
-      inlineReviewInfo += `[This version of the file (${original_commit.oid})](${path_url_factory(inline_comment.path, inline_comment.originalCommit)})\n\n`;
+      inlineReviewInfo += `[This version of the file (${original_commit_oid})](${path_url_factory(inline_comment.path, original_commit_oid)})\n\n`;
       inlineReviewInfo += `[The merged version of the file (${merge_commit})](${path_url_factory(inline_comment.path, merge_commit)})\n\n`;
       inlineReviewInfo += `[The AST version of the file (Spoon)](${spoon_url})\n\n`;
       inlineReviewInfo += `[History of changes of this file in this PR](${history_commits_url_factory(inline_comment.path, last_commit.oid)})\n\n`;
