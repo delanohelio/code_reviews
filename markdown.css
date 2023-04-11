@@ -112,7 +112,7 @@ td { vertical-align: top; }
     h2, h3 { page-break-after: avoid; }
 }
 
-.commits{
+.border, .commits{
     border: 1px solid;
     padding-left: 15px;;
 }

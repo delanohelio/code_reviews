@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Understandability Improvement</title>
+  <!-- Make sure to load the highlight.js CSS file before the Diff2Html CSS file -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/github.min.css"/>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"/>
+  <link rel="stylesheet" type="text/css" href="markdown.css"/>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script>
+    function getAllUrlParams(url) {
+      // get query string from url (optional) or window
+      var queryString = url ? url.split('?')[1] : window.location.search.slice(1);
+
+      // we'll store the parameters here
+      var obj = {};
+
+      // if query string exists
+      if (queryString) {
+
+        // stuff after # is not part of query string, so get rid of it
+        queryString = queryString.split('#')[0];
+
+        // split our query string into its component parts
+        var arr = queryString.split('&');
+
+        for (var i = 0; i < arr.length; i++) {
+          // separate the keys and the values
+          var a = arr[i].split('=');
+
+          // set parameter name and value (use 'true' if empty)
+          var paramName = a[0];
+          var paramValue = typeof (a[1]) === 'undefined' ? true : a[1];
+
+          //cast
+          paramValue = paramValue == "true" ? true : paramValue
+          paramValue = paramValue == "false" ? false : paramValue
+          paramValue = isNaN(parseInt(paramValue)) ? paramValue : parseInt(paramValue)
+
+          // (optional) keep case consistent
+          //paramName = paramName.toLowerCase();
+          if (typeof paramValue === 'string') paramValue = paramValue;
+
+          // if the paramName ends with square brackets, e.g. colors[] or colors[2]
+          if (paramName.match(/\[(\d+)?\]$/)) {
+
+            // create key if it doesn't exist
+            var key = paramName.replace(/\[(\d+)?\]/, '');
+            if (!obj[key]) obj[key] = [];
+
+            // if it's an indexed array e.g. colors[2]
+            if (paramName.match(/\[\d+\]$/)) {
+              // get the index value and add the entry at the appropriate position
+              var index = /\[(\d+)\]/.exec(paramName)[1];
+              obj[key][index] = paramValue;
+            } else {
+              // otherwise add the value to the end of the array
+              obj[key].push(paramValue);
+            }
+          } else {
+            // we're dealing with a string
+            if (!obj[paramName]) {
+              // if it doesn't exist, create property
+              obj[paramName] = paramValue;
+            } else if (obj[paramName] && typeof obj[paramName] === 'string') {
+              // if property does exist and it's a string, convert it to an array
+              obj[paramName] = [obj[paramName]];
+              obj[paramName].push(paramValue);
+            } else {
+              // otherwise add the property
+              obj[paramName].push(paramValue);
+            }
+          }
+        }
+      }
+      return obj;
+    }
+
+    function createDiffString(changed_code) {
+      return changed_code[0]["header"] + "\n" + changed_code.map(code_change => code_change.chunk).join("\n")
+    }
+
+
+    function createDiff(path, chunk) {
+      let diff = `--- a/${path}\n`
+      diff += `+++ b/${path}\n`
+      diff += chunk
+      return diff;
+    }
+
+    function mergeObjectWithArrays(obj1, obj2) {
+      for (let key in obj2) {
+        if (key in obj1) {
+          obj1[key] = [...obj1[key], ...obj2[key]]
+        }else{
+          obj1[key] = obj2[key]
+        }
+      }
+      return obj1
+    }
+
+    function createMapFromListOfObjects(list_objects, key) {
+      return Object.fromEntries(list_objects.map(o => [o[key],o]))
+    }
+
+    function parseDate(str_date) {
+      return str_date.split("T")[0];
+    }
+
+
+    function createChangedCodeMap(revised_code) {
+      let changed_code_map = {}
+      const revised_code_commit = revised_code.commit
+      const changed_code = revised_code.changed_code
+      changed_code_map[revised_code_commit] = changed_code.map(({header, chunk}) => ({header, chunk}))
+
+      for (let index in changed_code) {
+        const changed_code_chunk = changed_code[index];
+        if (changed_code_chunk.next_change) {
+          changed_code_map = mergeObjectWithArrays(changed_code_map, createChangedCodeMap(changed_code_chunk.next_change))
+        }
+      }
+      return changed_code_map;
+    }
+
+    function makeDiffCodeDiv(elementNameId) {
+
+      const divDiffCode = Object.assign(document.createElement('div'), {
+        id: elementNameId,
+      });
+
+      const toggleFormatButton = Object.assign(document.createElement('button'), {
+        id: 'toggleChunkFormat',
+        type: "button",
+      });
+
+      toggleFormatButton.onclick = () => toggleChunkFormat(elementNameId)
+
+      const toggleLimitButton = Object.assign(document.createElement('button'), {
+        id: 'toggleChunkLimit',
+        type: "button",
+      });
+
+      toggleLimitButton.onclick = () => toggleChunkLimit(elementNameId)
+
+      const chunkDiv = Object.assign(document.createElement('div'), {
+        id: 'chunk',
+        className: `blockCode`
+      });
+
+      divDiffCode.appendChild(toggleFormatButton)
+      divDiffCode.appendChild(toggleLimitButton)
+      divDiffCode.appendChild(chunkDiv)
+
+      return divDiffCode;
+
+    }
+
+    var params
+    function toggleChunkFormat(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const toggleChunkFormatButton = diffCodeDiv.querySelector("#toggleChunkFormat");
+      drawInlineReviewCodeChunk(elementId);
+      toggleChunkFormatButton.innerText = toggleChunkFormatButton.innerText == "line-by-line" ? "side-by-side" : "line-by-line";
+    }
+
+    var diff_string;
+    function drawInlineReviewCodeChunk(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const blockCodeElement = diffCodeDiv.querySelector("#chunk")
+      const toggleChunkFormatButton = diffCodeDiv.querySelector("#toggleChunkFormat");
+      const diff_params = {...params};
+      diff_params.outputFormat = toggleChunkFormatButton.innerText;
+      blockCodeElement.innerHTML = Diff2Html.html(diff_string[elementId], diff_params);
+      drawCodeLines(elementId)
+    }
+
+    function toggleChunkLimit(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const toggleChunkLimitButton = diffCodeDiv.querySelector('#toggleChunkLimit')
+      params.showAllDiff = !params.showAllDiff
+      toggleChunkLimitButton.innerText = params.showAllDiff ? "collapse diff" : "show all diff"
+      drawCodeLines(elementId)
+    }
+
+    function drawCodeLines(elementId) {
+      const diffCodeDiv = document.getElementById(elementId)
+      const blockCodeElement = diffCodeDiv.querySelector("#chunk")
+      const diffTables = blockCodeElement.getElementsByClassName("d2h-diff-tbody")
+      for (const diffTable of diffTables) {
+        const codeLines = diffTable.getElementsByTagName("tr")
+        const toggleChunkLimit = diffCodeDiv.querySelector('#toggleChunkLimit')
+        if (params.showTotalLines < codeLines.length - 1) {
+          for (let index = 1; index < codeLines.length - params.showTotalLines; ++index) {
+            codeLines[index].hidden = !params.showAllDiff
+          }
+          toggleChunkLimit.hidden = false
+        } else {
+          toggleChunkLimit.hidden = true
+        }
+      }
+    }
+
+    function togglePatchShow(buttonId, divId) {
+      const showButton = document.getElementById(buttonId);
+      const div = document.getElementById(divId);
+      if (showButton.textContent == "Show") {
+        div.hidden = false;
+        showButton.textContent = "Hide";
+      }else {
+        div.hidden = true;
+        showButton.textContent = "Show";
+      }
+    }
+
+  </script>
+</head>
+<body>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    params = getAllUrlParams();
+    console.log(params);
+    const patch_commit_path = "patch_commit.json"
+    let pr_data, patch_commit_dict;
+    $.when(
+            $.getJSON(params.json, function (data) {
+              pr_data = data
+            }),
+            $.getJSON(patch_commit_path, function (data) {
+              patch_commit_dict = data
+            }),
+    ).then(function () {
+      console.log(pr_data);
+      const inline_comment = pr_data.timeline.find(item => item["id"] === (params.inline + "=="));
+
+      const repository_name = pr_data["pr_url"].split("/").slice(3, 5).join("/");
+      const pr_number = pr_data["pr_number"];
+      const pr_title = pr_data["pr_title"];
+      const pr_author = pr_data["pr_author"];
+
+      let comments = [inline_comment]
+      if (inline_comment["replies"]) {
+        comments = [inline_comment].concat(inline_comment["replies"]);
+      }
+      //const comments_text = comments.map(comment => `**${comment.author}**: ${comment.bodyText}`).join("\n\n")
+      const comment_class = comment_author => comment_author === pr_author ? "developer" : "reviewer"
+      const comments_text = comments.map(comment => `<b class=${comment_class(comment.author)}>${comment.author}</b>: ${comment.bodyText}`).join("\n\n")
+      //console.log(comments_text)
+
+      const commit_url_factory = commit => `https://github.com/${repository_name}/commit/${commit}`;
+      const history_commits_url_factory = (path, commit) => `https://github.com/${repository_name}/commits/${commit}/${path}`;
+      const path_url_factory = (path, commit) => `https://github.com/${repository_name}/blob/${commit}/${path}`;
+
+      const repository_name_json = params.json.split("/").at(-2)
+      const filename = inline_comment.path.split("/").at(-1)
+      const spoon_url= `https://github.com/delanohelio/code_reviews/blob/gh-pages/spooned/${repository_name_json}/${inline_comment.id}/${filename}`;
+
+      const commits_list = pr_data.timeline.filter(item => item["oid"]);
+      const last_commit = commits_list.slice(-1)[0]
+
+      const commits_map = createMapFromListOfObjects(commits_list, "oid")
+      const original_commit = commits_map[inline_comment.originalCommit]
+      const original_commit_oid = original_commit ? original_commit.oid : inline_comment.originalCommit;
+
+
+      let inlineReviewInfo = `**${repository_name} - PR ${pr_number}**\n\n`;
+      inlineReviewInfo += `**Title**: ${pr_title}\n\n`;
+      inlineReviewInfo += `**Author**: <span class=developer>${pr_author}</span>\n\n`;
+      inlineReviewInfo += `**Creation date**: ${parseDate(pr_data["pr_createdAt"])}\n\n`;
+      inlineReviewInfo += `Inline Review ID - [${inline_comment.id}](${inline_comment.url})\n\n`;
+      inlineReviewInfo += `[History of changes of this file in this PR](${history_commits_url_factory(inline_comment.path, last_commit.oid)})\n\n`;
+      inlineReviewInfo += `[History of changes of this file in main branch](${history_commits_url_factory(inline_comment.path, "HEAD")})\n\n`;
+
+      const inlineReviewInfoElement = document.getElementById('inlineReviewInfo')
+      inlineReviewInfoElement.innerHTML = marked.parse(inlineReviewInfo) + inlineReviewInfoElement.innerHTML
+
+      let originalSourceCodeInfo = `**Original Commit** - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
+      originalSourceCodeInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, original_commit_oid)})\n\n`;
+      originalSourceCodeInfo += `[Link to AST version of the file (Spoon)](${spoon_url})\n\n`;
+
+      const originalSourceCodeInfoElement = document.getElementById('originalCodeInfo')
+      originalSourceCodeInfoElement.innerHTML = marked.parse(originalSourceCodeInfo)
+
+      let inlineReviewComments = comments_text.split("\n").map(comment_line => `> ${comment_line.replace(/\s\s+/g, ' ')}`).join("\n")
+      inlineReviewComments += "\n\n"
+      document.getElementById('comments').innerHTML = marked.parse(inlineReviewComments)
+
+      //default values of params
+      params.drawFileList = "drawFileList" in params ? params.drawFileList : false;
+      params.outputFormat = "outputFormat" in params ? params.outputFormat : "line-by-line";
+      params.showAllDiff = "showAllDiff" in params ? params.showAllDiff : false;
+      params.showTotalLines = "showTotalLines" in params ? params.showTotalLines : 10;
+
+      const diffChunkCodeId = "diffChunkCode"
+      const diffHTMLArea = document.getElementById('diffHTMLArea')
+      diffHTMLArea.prepend(makeDiffCodeDiv(diffChunkCodeId))
+      diff_string = {}
+      diff_string[diffChunkCodeId] = createDiff(inline_comment.path, inline_comment.diffHunk)
+      drawInlineReviewCodeChunk(diffChunkCodeId)
+
+      // Patch
+
+      let code_changes = {}
+      let changesAfterReview = ""
+      if (inline_comment["revised_code"]) {
+        code_changes = createChangedCodeMap(inline_comment.revised_code);
+
+        for (let revised_code_commit in code_changes){
+          const commit_data = commits_map[revised_code_commit];
+          changesAfterReview += "<div style='border-style: groove'>\n\n"
+          changesAfterReview += `**Commit OID** - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})\n\n`
+          changesAfterReview += `**Commit Date** - *${ commit_data.committedDate}*\n\n`
+          changesAfterReview += `**Commit Description** - *${commit_data.message}*\n\n`
+          changesAfterReview += `[This version of the file](${path_url_factory(inline_comment.path, revised_code_commit)})\n\n`;
+          changesAfterReview += `<div id="diffHTMLArea_${revised_code_commit}"></div>\n\n`
+          changesAfterReview += "</div>"
+          //changesAfterReview += makeDiffCodeDiv("changes_"+revised_code_commit)
+        }
+      }else{
+        const patchShowButton = document.getElementById("patch_show_button");
+        patchShowButton.hidden = true;
+        const patchDiv = document.getElementById("changesAfterReview");
+        patchDiv.hidden = false;
+        changesAfterReview += "Not Found"
+      }
+
+      const patchCommit = patch_commit_dict[inline_comment.id];
+      const patchDataElement = document.getElementById('patchData')
+
+      if(patchCommit){
+        let codePatchInfo = `**Patch Commit** - [${patchCommit}](${commit_url_factory(patchCommit)})\n\n`;
+        codePatchInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, patchCommit)})\n\n`;
+
+        patchDataElement.innerHTML += marked.parse(codePatchInfo)
+
+        const codePatchChunkElementId = "patch"
+        patchDataElement.append(makeDiffCodeDiv(codePatchChunkElementId))
+        diff_string[codePatchChunkElementId] = createDiffString(code_changes[patchCommit])
+        drawInlineReviewCodeChunk(codePatchChunkElementId)
+      }else{
+        let codePatchInfo = "Patch not found";
+        patchDataElement.innerHTML += marked.parse(codePatchInfo);
+      }
+
+      const revised_code_in_main = inline_comment["revised_code_in_main"];
+      if (revised_code_in_main) {
+
+        code_changes = {...code_changes, ...createChangedCodeMap(revised_code_in_main)}
+
+        const mergeCommit = inline_comment.commits_in_main[0].oid;
+        const mergeDataElement = document.getElementById('mergeChange');
+
+        let codeMergeInfo = `**Merge Commit** - [${mergeCommit}](${commit_url_factory(mergeCommit)})\n\n`;
+        codeMergeInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, mergeCommit)})\n\n`;
+        mergeDataElement.innerHTML += marked.parse(codeMergeInfo)
+
+        const codeMergeChunkElementId = "merge"
+        mergeDataElement.append(makeDiffCodeDiv(codeMergeChunkElementId))
+        diff_string[codeMergeChunkElementId] = createDiffString(code_changes[mergeCommit])
+        drawInlineReviewCodeChunk(codeMergeChunkElementId)
+
+      }
+
+      // Main Changes
+
+      // console.log(changesAfterReview)
+      document.getElementById('changesAfterReview').innerHTML = marked.parse(changesAfterReview)
+
+      let changesAfterMerge = "";
+      const commits_in_main = inline_comment["commits_in_main"];
+      if (commits_in_main) {
+        for (let index in commits_in_main){
+          const patch = commits_in_main[index];
+          changesAfterMerge += "<div style='border-style: groove'>\n\n"
+          changesAfterMerge += `**Commit OID** - [${patch.oid}](${commit_url_factory(patch.oid)})\n\n`
+          changesAfterMerge += `**Commit Date** - *${ patch.committedDate}*\n\n`
+          changesAfterMerge += `**Commit Description** - *${patch.message}*\n\n`
+          changesAfterMerge += `[Link to this version of the file](${path_url_factory(inline_comment.path, patch.oid)})\n\n`;
+          changesAfterMerge += `<div id="diffHTMLArea_${patch.oid}"></div>\n\n`
+          changesAfterMerge += "</div>"
+        }
+      }else{
+        const mergePatchShowButton = document.getElementById("full_history_changes");
+        mergePatchShowButton.hidden = true;
+      }
+      document.getElementById('changesAfterMerge').innerHTML = marked.parse(changesAfterMerge)
+
+
+      for (let commit in code_changes) {
+        let diffHtmlArea = document.getElementById("diffHTMLArea_"+commit)
+        let diffCodeReviewId = "changes_"+commit
+        diffHtmlArea.prepend(makeDiffCodeDiv(diffCodeReviewId))
+        diff_string[diffCodeReviewId] = createDiffString(code_changes[commit])
+        drawInlineReviewCodeChunk(diffCodeReviewId)
+        //document.getElementById(`changes_${commit}`).innerHTML = Diff2Html.html(createDiffString(code_changes[commit]), params);
+      }
+      const toggleChunkFormatButtonText = params.outputFormat == "line-by-line" ? "side-by-side" : "line-by-line"
+      document.querySelectorAll("#toggleChunkFormat").forEach(e => e.textContent = toggleChunkFormatButtonText)
+
+      const toggleChunkLimitButtonText = params.showAllDiff ? "collapse diff" : "show all diff"
+      document.querySelectorAll("#toggleChunkLimit").forEach(e => e.textContent = toggleChunkLimitButtonText)
+
+
+      // HEAD
+
+      const headInfoElement = document.getElementById('headInfo');
+      let headInfo = "Not Found"
+
+      if (commits_in_main) {
+
+        const headCommitInfo = inline_comment.commits_in_main.slice(-1)[0];
+        headInfo = `**Commit OID** - [${headCommitInfo.oid}](${commit_url_factory(headCommitInfo.oid)})\n\n`
+        headInfo += `**Commit Date** - *${ headCommitInfo.committedDate}*\n\n`
+        headInfo += `**Commit Description** - *${headCommitInfo.message}*\n\n`
+        headInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, headCommitInfo.oid)})\n\n`;
+
+      }
+
+      headInfoElement.innerHTML = marked.parse(headInfo)
+
+
+      console.log(inline_comment)
+
+
+      // List commits in pull request
+
+      const url_list_commits_pr = `https://github.com/${repository_name}/pull/${pr_number}/commits`;
+
+      let commitsContent = `[List of commits in GitHub](${url_list_commits_pr})`;
+      let original_commit_date
+      if (original_commit) {
+        original_commit_date = new Date(original_commit.committedDate);
+      }else{
+        commitsContent += "The original commit is not between this list of commits.\n\n"
+      }
+
+      commitsContent += "<table class='commits'>\n\n";
+      for (let i in commits_list) {
+        const commit_item = commits_list[i];
+        const commit_item_date = new Date(commit_item.committedDate);
+
+        let commit_order = ''
+        if (original_commit) {
+          if (original_commit.oid === commit_item.oid) {
+            commit_order = 'original'
+          } else if (commit_item_date > original_commit_date) {
+            commit_order = 'after'
+          } else {
+            commit_order = 'before'
+          }
+        }
+
+        commitsContent += `<tr class='commits ${commit_order}'>`;
+        const commit_description = `${commit_item['message'].replaceAll("\n\n", "\n")}`
+        commitsContent += `<td class="commits oid">\n\n [${commit_item['oid']}](${commit_item['url']}) </td> \n\n <td class="commits desc">${commit_description}</td>\n\n`
+        commitsContent += "</tr>"
+        // commitsContent += '---\n\n'
+      }
+      commitsContent += "</table>"
+      document.getElementById('commits').innerHTML = marked.parse(commitsContent)
+
+
+    });
+  });
+</script>
+
+<div class="border">
+  <h2>Code Review and Inline Comment Information</h2>
+  <div id="inlineReviewInfo">
+    <hr>
+    <h3>Original Source Code (Before Patch) and Inline Comment</h3>
+    <div id="originalCodeInfo"></div>
+    <div id="diffHTMLArea"></div>
+    Legend: <span class="developer">Developer</span>   <span class="reviewer">Reviewer</span>
+    <div id="comments"></div>
+  </div>
+</div>
+
+<br>
+
+<div class="border">
+  <h2>Patch and Pull Request Changes</h2>
+  <div id="patchData">
+    <h3>Code Patch</h3>
+  </div>
+  <hr>
+  <div id="prFileChanges">
+    <h3> Changes in Pull Request found in the commented code  <button id="patch_show_button" onclick="togglePatchShow('patch_show_button', 'changesAfterReview')">Show</button></h3>
+    <div id="changesAfterReview" hidden></div>
+  </div>
+  <hr>
+  <div id="mergeInfo">
+    <h3>Merge Commit (Comparison with Original Version) <button id="merge_show_button" onclick="togglePatchShow('merge_show_button', 'mergeChange')">Show</button></h3>
+    <div id="mergeChange" hidden></div>
+  </div>
+</div>
+
+<br>
+
+<div class="border">
+  <h2>HEAD and Commits in Main Branch</h2>
+  <div id="full_history_changes">
+    <h3>Changes in file since Merge commit until HEAD <button id="main_show_button" onclick="togglePatchShow('main_show_button', 'changesAfterMerge')">Show</button></h3>
+    <div id="changesAfterMerge" hidden></div>
+  </div>
+  <hr>
+  <div id="headVersion">
+    <h3>HEAD Commit</h3>
+    <div id="headInfo"></div>
+  </div>
+</div>
+
+<br>
+
+<div class="border">
+  <h2>Additional Information</h2>
+  <h3>Commits in Pull Request <button id="commits_show_button" onclick="togglePatchShow('commits_show_button', 'commitsArea')">Show</button></h3>
+  <div id="commitsArea" hidden>
+    Legend: <span class="before">Before original commit</span>   <span class="original">Original Commit</span> <span class="after">After original commit</span>
+    <div id="commits"></div>
+  </div>
+</div>
+</body>
+</html>
