@@ -328,19 +328,27 @@
         changesAfterReview += "Not Found"
       }
 
-      const patchCommit = patch_commit_dict[inline_comment.id];
+      const patchCommitOID = patch_commit_dict[inline_comment.id];
+
       const patchDataElement = document.getElementById('patchData')
 
-      if(patchCommit){
-        let codePatchInfo = `**Patch Commit** - [${patchCommit}](${commit_url_factory(patchCommit)})\n\n`;
-        codePatchInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, patchCommit)})\n\n`;
+      if(patchCommitOID){
+
+        const patchCommit = commits_map[patchCommitOID]
+
+        let codePatchInfo = `**Patch Commit** - [${patchCommitOID}](${commit_url_factory(patchCommitOID)})\n\n`;
+        codePatchInfo += `**Commit Description** - *${patchCommit.message}*\n\n`
+        codePatchInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, patchCommitOID)})\n\n`;
 
         patchDataElement.innerHTML += marked.parse(codePatchInfo)
 
-        const codePatchChunkElementId = "patch"
-        patchDataElement.append(makeDiffCodeDiv(codePatchChunkElementId))
-        diff_string[codePatchChunkElementId] = createDiffString(code_changes[patchCommit])
-        drawInlineReviewCodeChunk(codePatchChunkElementId)
+        const patchChangeDiff = code_changes[patchCommitOID]
+        if(patchChangeDiff) {
+          const codePatchChunkElementId = "patch"
+          patchDataElement.append(makeDiffCodeDiv(codePatchChunkElementId))
+          diff_string[codePatchChunkElementId] = createDiffString()
+          drawInlineReviewCodeChunk(codePatchChunkElementId)
+        }
       }else{
         let codePatchInfo = "Patch not found";
         patchDataElement.innerHTML += marked.parse(codePatchInfo);
