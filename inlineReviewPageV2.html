@@ -346,7 +346,7 @@
         if(patchChangeDiff) {
           const codePatchChunkElementId = "patch"
           patchDataElement.append(makeDiffCodeDiv(codePatchChunkElementId))
-          diff_string[codePatchChunkElementId] = createDiffString()
+          diff_string[codePatchChunkElementId] = createDiffString(patchChangeDiff)
           drawInlineReviewCodeChunk(codePatchChunkElementId)
         }
       }else{
