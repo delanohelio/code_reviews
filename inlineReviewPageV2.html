@@ -234,6 +234,9 @@
               patch_commit_dict = data
             }),
     ).then(function () {
+
+      marked.use({mangle: false, headerIds: false})
+
       console.log(pr_data);
       const inline_comment = pr_data.timeline.find(item => item["id"] === (params.inline + "=="));
 
@@ -328,11 +331,16 @@
         changesAfterReview += "Not Found"
       }
 
-      const patchCommitOID = patch_commit_dict[inline_comment.id];
+      let patchCommitOID = patch_commit_dict[inline_comment.id];
+
+      if (!patchCommitOID && params["code_changes_commit_from_json"]){
+        let revised_code = inline_comment['revised_code'] ?? {}
+        patchCommitOID = revised_code['commit']
+      }
 
       const patchDataElement = document.getElementById('patchData')
 
-      if(patchCommitOID){
+      if(patchCommitOID) {
 
         const patchCommit = commits_map[patchCommitOID]
 
@@ -343,12 +351,13 @@
         patchDataElement.innerHTML += marked.parse(codePatchInfo)
 
         const patchChangeDiff = code_changes[patchCommitOID]
-        if(patchChangeDiff) {
+        if (patchChangeDiff) {
           const codePatchChunkElementId = "patch"
           patchDataElement.append(makeDiffCodeDiv(codePatchChunkElementId))
           diff_string[codePatchChunkElementId] = createDiffString(patchChangeDiff)
           drawInlineReviewCodeChunk(codePatchChunkElementId)
         }
+
       }else{
         let codePatchInfo = "Patch not found";
         patchDataElement.innerHTML += marked.parse(codePatchInfo);
