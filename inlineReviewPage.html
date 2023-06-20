@@ -84,7 +84,7 @@
         const inlineReviewInfoElement = document.getElementById('inlineReviewInfo');
         inlineReviewInfoElement.innerText = `Searching by inline review: ${inlineReviewId}`;
 
-        const selectedSampleURL = "selected-sample.json";
+        const selectedSampleURL = "sample-ids.json";
 
         $.getJSON(selectedSampleURL, function (selectedSample) {
             const inlineReviewData = selectedSample[inlineReviewId];
