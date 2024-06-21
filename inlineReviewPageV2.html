@@ -217,6 +217,10 @@
       }
     }
 
+    function copyClipboard(text){
+      navigator.clipboard.writeText(text);
+    }
+
   </script>
 </head>
 <body>
@@ -281,7 +285,7 @@
       const inlineReviewInfoElement = document.getElementById('inlineReviewInfo')
       inlineReviewInfoElement.innerHTML = marked.parse(inlineReviewInfo) + inlineReviewInfoElement.innerHTML
 
-      let originalSourceCodeInfo = `**Original Commit** - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)})\n\n`;
+      let originalSourceCodeInfo = `**Original Commit** - [${inline_comment.originalCommit}](${commit_url_factory(inline_comment.originalCommit)}) <button onclick="copyClipboard('${inline_comment.originalCommit}')">Copy</button>\n\n`;
       originalSourceCodeInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, original_commit_oid)})\n\n`;
       originalSourceCodeInfo += `[Link to AST version of the file (Spoon)](${spoon_url})\n\n`;
 
@@ -315,7 +319,7 @@
         for (let revised_code_commit in code_changes){
           const commit_data = commits_map[revised_code_commit];
           changesAfterReview += "<div style='border-style: groove'>\n\n"
-          changesAfterReview += `**Commit OID** - [${revised_code_commit}](${commit_url_factory(revised_code_commit)})\n\n`
+          changesAfterReview += `**Commit OID** - [${revised_code_commit}](${commit_url_factory(revised_code_commit)}) <button onclick="copyClipboard('${revised_code_commit}')">Copy</button>\n\n`
           changesAfterReview += `**Commit Date** - *${ commit_data.committedDate}*\n\n`
           changesAfterReview += `**Commit Description** - *${commit_data.message}*\n\n`
           changesAfterReview += `[This version of the file](${path_url_factory(inline_comment.path, revised_code_commit)})\n\n`;
@@ -371,7 +375,7 @@
         const mergeCommit = inline_comment.commits_in_main[0].oid;
         const mergeDataElement = document.getElementById('mergeChange');
 
-        let codeMergeInfo = `**Merge Commit** - [${mergeCommit}](${commit_url_factory(mergeCommit)})\n\n`;
+        let codeMergeInfo = `**Merge Commit** - [${mergeCommit}](${commit_url_factory(mergeCommit)}) <button onclick="copyClipboard('${mergeCommit}')">Copy</button>\n\n`;
         codeMergeInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, mergeCommit)})\n\n`;
         mergeDataElement.innerHTML += marked.parse(codeMergeInfo)
 
@@ -393,7 +397,7 @@
         for (let index in commits_in_main){
           const patch = commits_in_main[index];
           changesAfterMerge += "<div style='border-style: groove'>\n\n"
-          changesAfterMerge += `**Commit OID** - [${patch.oid}](${commit_url_factory(patch.oid)})\n\n`
+          changesAfterMerge += `**Commit OID** - [${patch.oid}](${commit_url_factory(patch.oid)}) <button onclick="copyClipboard('${patch.oid}')">Copy</button>\n\n`
           changesAfterMerge += `**Commit Date** - *${ patch.committedDate}*\n\n`
           changesAfterMerge += `**Commit Description** - *${patch.message}*\n\n`
           changesAfterMerge += `[Link to this version of the file](${path_url_factory(inline_comment.path, patch.oid)})\n\n`;
@@ -430,7 +434,7 @@
       if (commits_in_main) {
 
         const headCommitInfo = inline_comment.commits_in_main.slice(-1)[0];
-        headInfo = `**Commit OID** - [${headCommitInfo.oid}](${commit_url_factory(headCommitInfo.oid)})\n\n`
+        headInfo = `**Commit OID** - [${headCommitInfo.oid}](${commit_url_factory(headCommitInfo.oid)}) <button onclick="copyClipboard('${headCommitInfo.oid}')">Copy</button>\n\n`
         headInfo += `**Commit Date** - *${ headCommitInfo.committedDate}*\n\n`
         headInfo += `**Commit Description** - *${headCommitInfo.message}*\n\n`
         headInfo += `[Link to this version of the file](${path_url_factory(inline_comment.path, headCommitInfo.oid)})\n\n`;
